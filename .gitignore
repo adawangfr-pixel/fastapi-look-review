@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 数据库与上传文件（运行时生成，不入库）
+database.db
+uploads/
+
+# 编辑器/系统
+.DS_Store
+.idea/
+.vscode/
