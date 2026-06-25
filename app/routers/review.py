@@ -112,27 +112,30 @@ def update_tags(
     if product is None:
         raise HTTPException(status_code=404, detail=f"商品不存在：{sku}")
 
-    # 1. 删除该商品已有的标签关联
+    # 先做去重与清洗，保持输入顺序，避免重复标签触发复合主键冲突
+    cleaned_tags: list[str] = []
+    for raw in payload.tags:
+        tag_name = raw.strip()
+        if tag_name and tag_name not in cleaned_tags:
+            cleaned_tags.append(tag_name)
+
+    # 删除旧关联与建立新关联放在同一个事务中提交，避免中途失败导致标签丢失
     existing_links = session.exec(
         select(ProductTag).where(ProductTag.product_sku == sku)
     ).all()
     for link in existing_links:
         session.delete(link)
-    session.commit()
+    # flush 让删除先生效，从而允许在同一事务里重新插入相同的 (sku, tag_id)
+    session.flush()
 
-    # 2. 逐个处理新标签：标签不存在则创建，再建立关联
-    for raw in payload.tags:
-        tag_name = raw.strip()
-        if not tag_name:
-            continue
+    for tag_name in cleaned_tags:
         tag = session.exec(select(Tag).where(Tag.name == tag_name)).first()
         if tag is None:
             tag = Tag(name=tag_name)
             session.add(tag)
-            session.commit()
-            session.refresh(tag)
-        link = ProductTag(product_sku=sku, tag_id=tag.id)
-        session.add(link)
+            session.flush()
+        session.add(ProductTag(product_sku=sku, tag_id=tag.id))
+
     session.commit()
 
-    return {"ok": True, "sku": sku, "tags": payload.tags}
+    return {"ok": True, "sku": sku, "tags": cleaned_tags}

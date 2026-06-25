@@ -85,7 +85,10 @@ class ReviewStatus(SQLModel, table=True):
     __tablename__ = "review_status"
 
     id: int | None = Field(default=None, primary_key=True)
-    sku: str = Field(foreign_key="products.sku", index=True, description="所属商品 SKU")
+    # 每个商品仅有一条审核状态记录，sku 唯一可避免并发上传产生重复记录
+    sku: str = Field(
+        foreign_key="products.sku", unique=True, index=True, description="所属商品 SKU"
+    )
     status: ReviewStatusEnum = Field(
         default=ReviewStatusEnum.PENDING, description="当前审核状态"
     )

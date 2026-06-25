@@ -69,7 +69,8 @@
 
       if (action === "tags") {
         const raw = document.getElementById(`tags-${sku}`).value;
-        const tags = raw.split(/[，,]/).map((s) => s.trim()).filter(Boolean);
+        // 去重并去空，避免重复标签
+        const tags = [...new Set(raw.split(/[，,]/).map((s) => s.trim()).filter(Boolean))];
         const resp = await fetch(`/review/${sku}/tags`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
