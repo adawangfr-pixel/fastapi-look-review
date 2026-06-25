@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>商品审核</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>商品审核</h1>
+    <nav>
+      <ul>
+        <li><a href="/static/upload.html">上传</a></li>
+        <li><a href="/static/products.html">商品列表</a></li>
+        <li><a href="/static/review.html">审核</a></li>
+        <li><a href="/static/report.html">导出</a></li>
+        <li><a href="/docs">API 文档</a></li>
+      </ul>
+    </nav>
+
+    <label>审核人
+      <input type="text" id="reviewer" placeholder="你的名字" value="审核员A" />
+    </label>
+
+    <div id="cards"></div>
+  </main>
+
+  <script>
+    async function load() {
+      const resp = await fetch("/products?offset=0&limit=100");
+      const data = await resp.json();
+      const cards = document.getElementById("cards");
+      cards.innerHTML = "";
+
+      for (const item of data.items) {
+        const article = document.createElement("article");
+        const img = item.images && item.images.length
+          ? `<img src="/${item.images[0]}" alt="thumb" style="width:120px;height:120px;object-fit:cover" />`
+          : "（无图）";
+        const tags = (item.tags || []).join("、") || "—";
+        article.innerHTML =
+          `<header><strong>${item.sku}</strong> - ${item.name}</header>` +
+          `<div>${img}</div>` +
+          `<p>look 结果：${item.look_result || "—"}（置信度 ${item.confidence ?? "—"}）</p>` +
+          `<p>当前状态：<mark>${item.review_status || "—"}</mark></p>` +
+          `<p>标签：${tags}</p>` +
+          `<div class="grid">` +
+          `<button data-sku="${item.sku}" data-action="approve">通过</button>` +
+          `<button class="secondary" data-sku="${item.sku}" data-action="reject">驳回</button>` +
+          `<button class="contrast" data-sku="${item.sku}" data-action="resubmit">重新提交</button>` +
+          `</div>` +
+          `<div class="grid">` +
+          `<input type="text" placeholder="改标签：逗号分隔" id="tags-${item.sku}" />` +
+          `<button data-sku="${item.sku}" data-action="tags">保存标签</button>` +
+          `</div>`;
+        cards.appendChild(article);
+      }
+
+      cards.querySelectorAll("button[data-action]").forEach((btn) => {
+        btn.addEventListener("click", () => handle(btn));
+      });
+    }
+
+    async function handle(btn) {
+      const sku = btn.dataset.sku;
+      const action = btn.dataset.action;
+      const reviewer = document.getElementById("reviewer").value;
+
+      if (action === "tags") {
+        const raw = document.getElementById(`tags-${sku}`).value;
+        const tags = raw.split(/[，,]/).map((s) => s.trim()).filter(Boolean);
+        const resp = await fetch(`/review/${sku}/tags`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tags }),
+        });
+        const data = await resp.json();
+        alert(resp.ok ? "标签已更新" : "失败：" + JSON.stringify(data));
+        load();
+        return;
+      }
+
+      // 审核动作
+      const resp = await fetch(`/review/${sku}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, reviewer, note: "" }),
+      });
+      const data = await resp.json();
+      alert(resp.ok ? `已更新为：${data.status}` : "失败：" + JSON.stringify(data));
+      load();
+    }
+
+    load();
+  </script>
+</body>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>商品上传</title>
+  <!-- Pico.css CDN，无需任何构建工具 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>商品图片上传</h1>
+    <nav>
+      <ul>
+        <li><a href="/static/upload.html">上传</a></li>
+        <li><a href="/static/products.html">商品列表</a></li>
+        <li><a href="/static/review.html">审核</a></li>
+        <li><a href="/static/report.html">导出</a></li>
+        <li><a href="/docs">API 文档</a></li>
+      </ul>
+    </nav>
+
+    <form id="upload-form">
+      <label>SKU（必填）
+        <input type="text" name="sku" required placeholder="例如 SKU001" />
+      </label>
+      <label>名称（必填）
+        <input type="text" name="name" required placeholder="例如 春季女装套装" />
+      </label>
+      <label>类目
+        <input type="text" name="category" placeholder="例如 女装" />
+      </label>
+      <label>品牌
+        <input type="text" name="brand" placeholder="例如 ACME" />
+      </label>
+      <label>价格
+        <input type="number" name="price" step="0.01" placeholder="例如 199.00" />
+      </label>
+      <label>描述
+        <textarea name="description" placeholder="商品描述"></textarea>
+      </label>
+      <label>商品图片（必填）
+        <input type="file" name="file" accept="image/*" required />
+      </label>
+      <button type="submit">上传</button>
+    </form>
+
+    <article id="result" hidden></article>
+  </main>
+
+  <script>
+    const form = document.getElementById("upload-form");
+    const result = document.getElementById("result");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      // 直接用表单构造 FormData（包含文件）
+      const formData = new FormData(form);
+      // 价格为空时移除该字段，避免后端解析报错
+      if (!formData.get("price")) formData.delete("price");
+
+      try {
+        const resp = await fetch("/upload", { method: "POST", body: formData });
+        const data = await resp.json();
+        result.hidden = false;
+        if (resp.ok) {
+          result.innerHTML =
+            "<strong>上传成功！</strong><br/>SKU：" + data.sku +
+            "<br/>look 结果：" + data.look_result +
+            "<br/>置信度：" + data.confidence +
+            "<br/>图片路径：" + data.image_url;
+          form.reset();
+        } else {
+          result.innerHTML = "<strong>上传失败：</strong>" + JSON.stringify(data);
+        }
+      } catch (err) {
+        result.hidden = false;
+        result.textContent = "请求出错：" + err;
+      }
+    });
+  </script>
+</body>
+</html>

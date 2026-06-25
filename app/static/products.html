@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>商品列表</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>商品列表</h1>
+    <nav>
+      <ul>
+        <li><a href="/static/upload.html">上传</a></li>
+        <li><a href="/static/products.html">商品列表</a></li>
+        <li><a href="/static/review.html">审核</a></li>
+        <li><a href="/static/report.html">导出</a></li>
+        <li><a href="/docs">API 文档</a></li>
+      </ul>
+    </nav>
+
+    <table>
+      <thead>
+        <tr>
+          <th>图片</th>
+          <th>SKU</th>
+          <th>名称</th>
+          <th>类目</th>
+          <th>标签</th>
+          <th>look 结果</th>
+          <th>置信度</th>
+          <th>审核状态</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <div class="grid">
+      <button id="prev">上一页</button>
+      <span id="pageinfo" style="text-align:center;align-self:center"></span>
+      <button id="next">下一页</button>
+    </div>
+  </main>
+
+  <script>
+    const limit = 10;
+    let offset = 0;
+    let total = 0;
+
+    async function load() {
+      const resp = await fetch(`/products?offset=${offset}&limit=${limit}`);
+      const data = await resp.json();
+      total = data.total;
+
+      const rows = document.getElementById("rows");
+      rows.innerHTML = "";
+      for (const item of data.items) {
+        const tr = document.createElement("tr");
+        const img = item.images && item.images.length
+          ? `<img src="/${item.images[0]}" alt="thumb" style="width:60px;height:60px;object-fit:cover" />`
+          : "（无图）";
+        const tags = (item.tags || []).join("、") || "—";
+        tr.innerHTML =
+          `<td>${img}</td>` +
+          `<td>${item.sku}</td>` +
+          `<td>${item.name}</td>` +
+          `<td>${item.category || "—"}</td>` +
+          `<td>${tags}</td>` +
+          `<td>${item.look_result || "—"}</td>` +
+          `<td>${item.confidence ?? "—"}</td>` +
+          `<td>${item.review_status || "—"}</td>`;
+        rows.appendChild(tr);
+      }
+
+      const maxPage = Math.max(1, Math.ceil(total / limit));
+      const curPage = Math.floor(offset / limit) + 1;
+      document.getElementById("pageinfo").textContent =
+        `第 ${curPage} / ${maxPage} 页（共 ${total} 条）`;
+    }
+
+    document.getElementById("prev").addEventListener("click", () => {
+      offset = Math.max(0, offset - limit);
+      load();
+    });
+    document.getElementById("next").addEventListener("click", () => {
+      if (offset + limit < total) {
+        offset += limit;
+        load();
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>
