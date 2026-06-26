@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>导出报表</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>导出 Excel 报表</h1>
+    <nav>
+      <ul>
+        <li><a href="/static/upload.html">上传</a></li>
+        <li><a href="/static/products.html">商品列表</a></li>
+        <li><a href="/static/review.html">审核</a></li>
+        <li><a href="/static/report.html">导出</a></li>
+        <li><a href="/docs">API 文档</a></li>
+      </ul>
+    </nav>
+
+    <p>点击下方按钮，将 products + 审核状态 + look 结果汇总导出为 Excel 文件。</p>
+    <button id="export-btn">导出 Excel</button>
+    <p id="msg"></p>
+  </main>
+
+  <script>
+    document.getElementById("export-btn").addEventListener("click", async () => {
+      const msg = document.getElementById("msg");
+      msg.textContent = "正在生成…";
+      try {
+        // 用 fetch 获取二进制内容，再触发浏览器下载
+        const resp = await fetch("/export");
+        if (!resp.ok) {
+          msg.textContent = "导出失败：" + resp.status;
+          return;
+        }
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "report.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        msg.textContent = "下载已开始。";
+      } catch (err) {
+        msg.textContent = "请求出错：" + err;
+      }
+    });
+  </script>
+</body>
+</html>
